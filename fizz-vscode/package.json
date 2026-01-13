@@ -1,7 +1,7 @@
 {
   "name": "fizzbee-fizz",
   "displayName": "Fizz Language Support (FizzBee)",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Syntax highlighting and language features for .fizz files.",
   "publisher": "local",
   "engines": {
@@ -20,13 +20,13 @@
     "test:all": "npm test && npm run test:lsp && npm run server:test",
     "server:lock": "cd server && uv lock",
     "server:test": "cd server && uv run --group dev python -m pytest",
-    "package": "npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn --allow-missing-repository --no-rewrite-relative-links",
-    "package:verbose": "npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn --allow-missing-repository --no-rewrite-relative-links -v",
-    "publish": "npm run compile && npx @vscode/vsce publish --no-dependencies",
-    "publish:patch": "npm run compile && npx @vscode/vsce publish patch --no-dependencies",
-    "publish:minor": "npm run compile && npx @vscode/vsce publish minor --no-dependencies",
-    "publish:major": "npm run compile && npx @vscode/vsce publish major --no-dependencies",
-    "publish:ovsx": "npm run compile && npx ovsx publish --no-dependencies -p \"$OPEN_VSX_TOKEN\""
+    "package": "npm run compile && npx @vscode/vsce package --dependencies --no-yarn --allow-missing-repository --no-rewrite-relative-links",
+    "package:verbose": "npm run compile && npx @vscode/vsce package --dependencies --no-yarn --allow-missing-repository --no-rewrite-relative-links -v",
+    "publish": "npm run compile && npx @vscode/vsce publish --dependencies",
+    "publish:patch": "npm run compile && npx @vscode/vsce publish patch --dependencies",
+    "publish:minor": "npm run compile && npx @vscode/vsce publish minor --dependencies",
+    "publish:major": "npm run compile && npx @vscode/vsce publish major --dependencies",
+    "publish:ovsx": "npm run compile && npx ovsx publish --dependencies -p \"$OPEN_VSX_TOKEN\""
   },
   "keywords": [],
   "author": "",

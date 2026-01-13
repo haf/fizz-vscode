@@ -62,7 +62,7 @@ You have two practical options.
 cd /Users/h/dev/fizzbee/fizz-vscode
 npm install
 npm run compile
-npx @vscode/vsce package
+npm run package
 ```
 
 This produces something like `fizzbee-fizz-0.0.1.vsix`.
