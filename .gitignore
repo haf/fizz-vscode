@@ -1,0 +1,25 @@
+.DS_Store
+
+# Cursor/IDE
+.cursor/
+.vscode/
+
+# Go build artifacts (if/when present)
+*.test
+*.out
+
+# Generated modelchecker outputs in this repo
+out/
+examples/out/
+
+# VS Code extension project (fizz-vscode/)
+fizz-vscode/node_modules/
+fizz-vscode/dist/
+fizz-vscode/.vscode-test/
+fizz-vscode/*.vsix
+
+# Python artifacts for the bundled language server
+fizz-vscode/server/.venv/
+fizz-vscode/server/**/__pycache__/
+fizz-vscode/server/**/.pytest_cache/
+

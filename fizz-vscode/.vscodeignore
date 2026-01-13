@@ -1,0 +1,10 @@
+.vscode-test/**
+node_modules/**
+src/**
+dist/test/**
+server/.venv/**
+server/**/__pycache__/**
+server/**/.pytest_cache/**
+**/*.ts
+**/*.map
+

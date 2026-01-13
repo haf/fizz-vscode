@@ -1,0 +1,11 @@
+# Local dev artifacts (also covered by repo root .gitignore)
+node_modules/
+dist/
+.vscode-test/
+*.vsix
+
+# Python server local envs/caches
+server/.venv/
+server/**/__pycache__/
+server/**/.pytest_cache/
+

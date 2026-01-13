@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Fizz",
+  "scopeName": "source.fizz",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#frontmatter" },
+    { "include": "#labels" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#booleans" }
+  ],
+  "repository": {
+    "frontmatter": {
+      "begin": "^(\\s*)---\\s*$",
+      "end": "^\\s*---\\s*$",
+      "name": "comment.block.fizz.frontmatter"
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.fizz",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "labels": {
+      "patterns": [
+        {
+          "name": "entity.name.label.fizz",
+          "begin": "`",
+          "end": "`",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.fizz"
+            }
+          ]
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.fizz",
+          "begin": "'",
+          "end": "'",
+          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.fizz" }]
+        },
+        {
+          "name": "string.quoted.double.fizz",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.fizz" }]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "name": "constant.numeric.fizz", "match": "\\b\\d+(?:\\.\\d+)?\\b" }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        { "name": "constant.language.fizz", "match": "\\b(True|False|None)\\b" }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.fizz",
+          "match": "\\b(if|elif|else|for|while|in|return|break|continue|pass|try|except|finally|with|raise|import|from|as|global|nonlocal|assert|class|def|lambda|and|or|not|is|await|async)\\b"
+        },
+        {
+          "name": "keyword.other.definition.fizz",
+          "match": "\\b(action|func|init|role|symmetric|invariants|assertion|compose|refine)\\b"
+        },
+        {
+          "name": "keyword.control.flow.fizz",
+          "match": "\\b(atomic|serial|parallel|oneof)\\b"
+        },
+        {
+          "name": "keyword.operator.fizz",
+          "match": "\\b(any|exists|fair|require|always|eventually|transition)\\b"
+        }
+      ]
+    }
+  }
+}
+

@@ -1,0 +1,2 @@
+"""Fizz language server package."""
+

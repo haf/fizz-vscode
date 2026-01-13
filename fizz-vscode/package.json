@@ -1,0 +1,76 @@
+{
+  "name": "fizzbee-fizz",
+  "displayName": "Fizz Language Support (FizzBee)",
+  "version": "0.0.1",
+  "description": "Syntax highlighting and language features for .fizz files.",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -p . -w",
+    "lint": "eslint .",
+    "test": "npm run compile && node ./dist/test/runTest.js",
+    "test:lsp": "npm run compile && node ./dist/test/runTestLsp.js",
+    "test:all": "npm test && npm run test:lsp && npm run server:test",
+    "server:lock": "cd server && uv lock",
+    "server:test": "cd server && uv run --group dev python -m pytest",
+    "package": "npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn --allow-missing-repository --no-rewrite-relative-links",
+    "package:verbose": "npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn --allow-missing-repository --no-rewrite-relative-links -v",
+    "publish": "npm run compile && npx @vscode/vsce publish --no-dependencies",
+    "publish:patch": "npm run compile && npx @vscode/vsce publish patch --no-dependencies",
+    "publish:minor": "npm run compile && npx @vscode/vsce publish minor --no-dependencies",
+    "publish:major": "npm run compile && npx @vscode/vsce publish major --no-dependencies",
+    "publish:ovsx": "npm run compile && npx ovsx publish --no-dependencies -p \"$OPEN_VSX_TOKEN\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "activationEvents": [
+    "onLanguage:fizz"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "fizz",
+        "aliases": [
+          "Fizz",
+          "fizz"
+        ],
+        "extensions": [
+          ".fizz"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "fizz",
+        "scopeName": "source.fizz",
+        "path": "./syntaxes/fizz.tmLanguage.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.0.7",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.53.0",
+    "@typescript-eslint/parser": "^8.53.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.2",
+    "glob": "^13.0.0",
+    "mocha": "^11.7.5",
+    "typescript": "^5.9.3"
+  }
+}
