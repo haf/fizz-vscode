@@ -1,0 +1,3 @@
+[submodule "vendor/fizzbee"]
+	path = vendor/fizzbee
+	url = https://github.com/fizzbee-io/fizzbee.git

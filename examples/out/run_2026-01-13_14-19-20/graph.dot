@@ -1,0 +1,58 @@
+digraph G {
+  "0x140001901e0" [label="yield
+Actions: 0, Forks: 0
+State: {\"counter\":\"role Counter#0 (fields(value = 0))\"}
+", color="black" penwidth="2" ];
+  "0x140001901e0" -> "0x14000190840" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x14000190840" [label="yield
+Actions: 1, Forks: 1
+State: {\"counter\":\"role Counter#0 (fields(value = 1))\"}
+", color="black" penwidth="2" ];
+  "0x14000190840" -> "0x14000190d20" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x14000190d20" [label="yield
+Actions: 2, Forks: 2
+State: {\"counter\":\"role Counter#0 (fields(value = 2))\"}
+", color="black" penwidth="2" ];
+  "0x14000190d20" -> "0x140001917a0" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x140001917a0" [label="yield
+Actions: 3, Forks: 3
+State: {\"counter\":\"role Counter#0 (fields(value = 3))\"}
+", color="black" penwidth="2" ];
+  "0x140001917a0" -> "0x140001917a0" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x140001917a0" -> "0x1400028c420" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x1400028c420" [label="yield
+Actions: 4, Forks: 4
+State: {\"counter\":\"role Counter#0 (fields(value = 3))\"}Returns: {\"Counter#0.Get\":\"3\"}
+", color="black" penwidth="2" ];
+  "0x1400028c420" -> "0x140001917a0" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x1400028c420" -> "0x1400028c420" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x1400028c420" -> "0x14000190d20" [label="Counter#0.Dec", color="black" penwidth="1" ];
+  "0x140001917a0" -> "0x14000190d20" [label="Counter#0.Dec", color="black" penwidth="1" ];
+  "0x14000190d20" -> "0x14000191860" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x14000191860" [label="yield
+Actions: 3, Forks: 3
+State: {\"counter\":\"role Counter#0 (fields(value = 2))\"}Returns: {\"Counter#0.Get\":\"2\"}
+", color="black" penwidth="2" ];
+  "0x14000191860" -> "0x140001917a0" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x14000191860" -> "0x14000191860" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x14000191860" -> "0x14000190840" [label="Counter#0.Dec", color="black" penwidth="1" ];
+  "0x14000190d20" -> "0x14000190840" [label="Counter#0.Dec", color="black" penwidth="1" ];
+  "0x14000190840" -> "0x14000190de0" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x14000190de0" [label="yield
+Actions: 2, Forks: 2
+State: {\"counter\":\"role Counter#0 (fields(value = 1))\"}Returns: {\"Counter#0.Get\":\"1\"}
+", color="black" penwidth="2" ];
+  "0x14000190de0" -> "0x14000190d20" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x14000190de0" -> "0x14000190de0" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x14000190de0" -> "0x140001901e0" [label="Counter#0.Dec", color="black" penwidth="1" ];
+  "0x14000190840" -> "0x140001901e0" [label="Counter#0.Dec", color="black" penwidth="1" ];
+  "0x140001901e0" -> "0x14000190900" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x14000190900" [label="yield
+Actions: 1, Forks: 1
+State: {\"counter\":\"role Counter#0 (fields(value = 0))\"}Returns: {\"Counter#0.Get\":\"0\"}
+", color="black" penwidth="2" ];
+  "0x14000190900" -> "0x14000190840" [label="Counter#0.Inc", color="black" penwidth="1" ];
+  "0x14000190900" -> "0x14000190900" [label="Counter#0.Get", color="black" penwidth="1" ];
+  "0x14000190900" -> "0x140001901e0" [label="Counter#0.Dec", color="black" penwidth="1" ];
+  "0x140001901e0" -> "0x140001901e0" [label="Counter#0.Dec", color="black" penwidth="1" ];
+}

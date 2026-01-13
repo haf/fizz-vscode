@@ -1,0 +1,11 @@
+digraph G {
+  node [shape=box];
+  splines=false;
+  rankdir=LR;
+  "actionCounterInc" [label="" shape="none"]
+  "actionCounterInc" -> "Counter" [label="Inc"];
+  "actionCounterGet" [label="" shape="none"]
+  "actionCounterGet" -> "Counter" [label="Get"];
+  "actionCounterDec" [label="" shape="none"]
+  "actionCounterDec" -> "Counter" [label="Dec"];
+}
