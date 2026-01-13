@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from fizz_lsp.analysis.indexer import build_index
+from fizz_lsp.analysis.type_env import build_type_env
 from fizz_lsp.parse import parse_text
-from fizz_lsp.server import _build_type_env
 
 
 def _repo_root() -> Path:
@@ -24,7 +24,7 @@ def test_inferrs_loop_var_role_type_from_append_pattern() -> None:
     assert parsed.tree is not None
     idx = build_index(parsed.tree)
 
-    env = _build_type_env(text, idx)
+    env = build_type_env(text, idx)
     # In the example, `participants.append(p)` where `p = Participant()` and then `for rm in participants:`
     assert env.get("rm") == "Participant"
 

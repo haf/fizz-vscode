@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fizz_lsp.server import _rename_edits_for_document
+from fizz_lsp.features.rename import rename_edits_for_document
 
 
 def _apply_edits(text: str, edits) -> str:
@@ -34,7 +34,7 @@ def test_rename_replaces_name_tokens_only() -> None:
             "",
         ]
     )
-    edits = _rename_edits_for_document(text, "a", "count")
+    edits = rename_edits_for_document(text, "a", "count")
     out = _apply_edits(text, edits)
     assert "a = 0" not in out
     assert "count = 0" in out
@@ -45,4 +45,4 @@ def test_rename_replaces_name_tokens_only() -> None:
 
 def test_rename_rejects_invalid_identifier() -> None:
     text = "init:\n  a = 0\n"
-    assert _rename_edits_for_document(text, "a", "not valid") == []
+    assert rename_edits_for_document(text, "a", "not valid") == []

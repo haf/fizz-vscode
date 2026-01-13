@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from fizz_lsp.analysis.indexer import build_index
+from fizz_lsp.features.completion import completion_items_for_position
 from fizz_lsp.parse import parse_text
-from fizz_lsp.server import _completion_for_position
 
 
 def _repo_root() -> Path:
@@ -29,7 +29,7 @@ def test_self_member_completion_inside_role() -> None:
     line = lines[target_line0]
     # cursor right after "self."
     char0 = line.index("self.") + len("self.")
-    items = _completion_for_position(text, idx, target_line0, char0)
+    items = completion_items_for_position(text, idx, target_line0, char0)
     labels = {i.label for i in items}
 
     assert "Abort" in labels
@@ -44,7 +44,7 @@ def test_keyword_completion_always_present() -> None:
     assert parsed.tree is not None
     idx = build_index(parsed.tree)
 
-    items = _completion_for_position(text, idx, 0, 0)
+    items = completion_items_for_position(text, idx, 0, 0)
     labels = {i.label for i in items}
     assert "action" in labels
     assert "role" in labels

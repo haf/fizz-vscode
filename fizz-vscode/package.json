@@ -1,9 +1,10 @@
 {
   "name": "fizzbee-fizz",
   "displayName": "Fizz Language Support (FizzBee)",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Syntax highlighting and language features for .fizz files.",
   "publisher": "local",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },

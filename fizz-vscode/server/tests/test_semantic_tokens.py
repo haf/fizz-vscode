@@ -4,11 +4,8 @@ from pathlib import Path
 
 from fizz_lsp.analysis.indexer import build_index
 from fizz_lsp.parse import parse_text
-from fizz_lsp.server import (
-    _SEMANTIC_TOKEN_TYPES,
-    _encode_semantic_tokens,
-    _semantic_token_type,
-)
+from fizz_lsp.features.semantic_tokens import SEMANTIC_TOKEN_TYPES, encode_semantic_tokens
+from fizz_lsp.features.semantic_tokens import _semantic_token_type as semantic_token_type
 
 
 def _repo_root() -> Path:
@@ -52,9 +49,9 @@ def test_semantic_tokens_cover_indexed_symbols() -> None:
     assert parsed.tree is not None
 
     idx = build_index(parsed.tree)
-    expected = [s for s in idx.symbols if _semantic_token_type(s) is not None]
+    expected = [s for s in idx.symbols if semantic_token_type(s) is not None]
 
-    data = _encode_semantic_tokens(text, idx.symbols, idx.calls)
+    data = encode_semantic_tokens(text, idx.symbols, idx.calls)
     decoded = _decode(data)
 
     # We now include lexical semantic tokens too, so this is a lower bound.
@@ -70,7 +67,7 @@ def test_semantic_tokens_include_keywords() -> None:
     assert parsed.tree is not None
     idx = build_index(parsed.tree)
 
-    data = _encode_semantic_tokens(text, idx.symbols, idx.calls)
+    data = encode_semantic_tokens(text, idx.symbols, idx.calls)
     decoded = _decode(data)
-    keyword_idx = _SEMANTIC_TOKEN_TYPES.index("keyword")
+    keyword_idx = SEMANTIC_TOKEN_TYPES.index("keyword")
     assert any(t[3] == keyword_idx for t in decoded)
