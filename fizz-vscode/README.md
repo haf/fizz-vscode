@@ -24,6 +24,17 @@ uv run --directory <serverDir> --frozen --no-dev -m fizz_lsp
   - Reason: installed extensions are often read-only; `uv` needs to create a venv alongside `pyproject.toml`.
   - Copy is versioned via a `.installed-version` marker.
 
+## Logs (where to look)
+
+The extension writes to an Output channel named **`FizzBee Fizz`**.
+
+- Open the Output panel (Command Palette → “View: Toggle Output”)
+- Select **FizzBee Fizz** in the dropdown
+
+If you want more server-side logging, set:
+
+- `FIZZ_LSP_LOG_LEVEL=DEBUG` in your environment before launching Cursor/VS Code.
+
 ## Requirements
 
 - **Node + npm** (for building / packaging the extension)

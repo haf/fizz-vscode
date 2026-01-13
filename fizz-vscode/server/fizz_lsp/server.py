@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -36,9 +38,17 @@ from lsprotocol.types import (
 )
 from pygls.server import LanguageServer
 
+from antlr4 import InputStream
+
 from .analysis.indexer import CallSite, Index, Span, Symbol, build_index
+from .fizz_parser.FizzLexer import FizzLexer
 from .parse import ParseError, parse_text
 from .positions import codepoint_index_to_utf16_units, utf16_units_to_codepoint_index
+
+
+_LOG_LEVEL = os.getenv("FIZZ_LSP_LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=_LOG_LEVEL, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger("fizz_lsp")
 
 
 @dataclass
@@ -67,6 +77,7 @@ class FizzLanguageServer(LanguageServer):
             diagnostics.append(_parse_error_to_diagnostic(text, err))
 
         self.publish_diagnostics(uri, diagnostics)
+        logger.debug("published %d diagnostics for %s", len(diagnostics), uri)
 
     def _analyze(self, uri: str) -> Optional[Index]:
         doc = self._docs.get(uri)
@@ -185,7 +196,18 @@ def _identifier_at(line_text: str, utf16_character: int) -> str:
     return line_text[l:r]
 
 
-_SEMANTIC_TOKEN_TYPES = ["class", "function", "method"]
+_SEMANTIC_TOKEN_TYPES = [
+    # lexical-ish
+    "comment",
+    "string",
+    "number",
+    "keyword",
+    "operator",
+    # structural
+    "class",
+    "function",
+    "method",
+]
 _SEMANTIC_TOKEN_LEGEND = SemanticTokensLegend(
     token_types=_SEMANTIC_TOKEN_TYPES, token_modifiers=[]
 )
@@ -208,6 +230,9 @@ def _encode_semantic_tokens(
     toks: list[tuple[int, int, int, int]] = (
         []
     )  # (line0, startCharUtf16, lengthUtf16, tokenType)
+
+    # Lexical tokens (to avoid "semantic tokens blanks out TextMate" behavior in some clients).
+    toks.extend(_lexical_semantic_tokens(text))
 
     for sym in symbols:
         ttype = _semantic_token_type(sym)
@@ -250,6 +275,126 @@ def _encode_semantic_tokens(
         prev_line = line0
         prev_start = start
     return data
+
+
+_NUMERIC_TOKEN_NAMES = {
+    "DECIMAL_INTEGER",
+    "OCT_INTEGER",
+    "HEX_INTEGER",
+    "BIN_INTEGER",
+    "FLOAT_NUMBER",
+    "IMAG_NUMBER",
+}
+
+_OPERATOR_TOKEN_NAMES = {
+    "DOT",
+    "ELLIPSIS",
+    "STAR",
+    "COMMA",
+    "COLON",
+    "SEMI_COLON",
+    "POWER",
+    "ASSIGN",
+    "OR_OP",
+    "XOR",
+    "AND_OP",
+    "LEFT_SHIFT",
+    "RIGHT_SHIFT",
+    "ADD",
+    "MINUS",
+    "DIV",
+    "MOD",
+    "IDIV",
+    "NOT_OP",
+    "LESS_THAN",
+    "GREATER_THAN",
+    "EQUALS",
+    "GT_EQ",
+    "LT_EQ",
+    "NOT_EQ_1",
+    "NOT_EQ_2",
+    "AT",
+    "ARROW",
+    "ADD_ASSIGN",
+    "SUB_ASSIGN",
+    "MULT_ASSIGN",
+    "AT_ASSIGN",
+    "DIV_ASSIGN",
+    "MOD_ASSIGN",
+    "AND_ASSIGN",
+    "OR_ASSIGN",
+    "XOR_ASSIGN",
+    "LEFT_SHIFT_ASSIGN",
+    "RIGHT_SHIFT_ASSIGN",
+    "POWER_ASSIGN",
+    "IDIV_ASSIGN",
+    "OPEN_PAREN",
+    "CLOSE_PAREN",
+    "OPEN_BRACE",
+    "CLOSE_BRACE",
+    "OPEN_BRACKET",
+    "CLOSE_BRACKET",
+}
+
+_SKIP_TOKEN_NAMES = {
+    "WS",
+    "NEWLINE",
+    "LINE_JOIN",
+    "INDENT",
+    "DEDENT",
+    "LINE_BREAK",
+}
+
+
+def _lexical_semantic_tokens(text: str) -> list[tuple[int, int, int, int]]:
+    """Return semantic tokens for comments/strings/numbers/keywords/operators.
+
+    This intentionally ignores NAME-like identifiers; those are handled by the
+    indexer (definitions/calls) so we avoid overlaps.
+    """
+    lines = text.splitlines()
+    stream = InputStream(text)
+    lexer = FizzLexer(stream)
+    all_tokens = lexer.getAllTokens()
+
+    out: list[tuple[int, int, int, int]] = []
+    for tok in all_tokens:
+        tname = lexer.symbolicNames[tok.type] if 0 <= tok.type < len(lexer.symbolicNames) else None
+        if not tname or tname in _SKIP_TOKEN_NAMES:
+            continue
+        if tok.text is None or tok.text == "":
+            continue
+
+        # Skip generic names; we handle identifiers structurally.
+        if tname == "NAME":
+            continue
+
+        if tok.line is None:
+            continue
+        line0 = tok.line - 1
+        if line0 < 0 or line0 >= len(lines):
+            continue
+        line_text = lines[line0]
+        start = codepoint_index_to_utf16_units(line_text, tok.column)
+        end = codepoint_index_to_utf16_units(line_text, tok.column + len(tok.text))
+        length = max(1, end - start)
+
+        if tname == "COMMENT":
+            ttype = _SEMANTIC_TOKEN_TYPES.index("comment")
+        elif tname == "STRING" or tname == "LABEL":
+            ttype = _SEMANTIC_TOKEN_TYPES.index("string")
+        elif tname in _NUMERIC_TOKEN_NAMES:
+            ttype = _SEMANTIC_TOKEN_TYPES.index("number")
+        elif tname in _OPERATOR_TOKEN_NAMES:
+            ttype = _SEMANTIC_TOKEN_TYPES.index("operator")
+        else:
+            # Treat everything else in the lexer vocabulary as a keyword-ish token.
+            # This covers Python keywords + Fizz keywords like ACTION/FUNC/ROLE/ATOMIC/etc.
+            ttype = _SEMANTIC_TOKEN_TYPES.index("keyword")
+
+        out.append((line0, start, length, ttype))
+
+    return out
 
 
 def _build_type_env(text: str, idx: Index) -> Dict[str, str]:
@@ -382,6 +527,7 @@ def did_open(ls: FizzLanguageServer, params: DidOpenTextDocumentParams) -> None:
     ls._docs[doc.uri] = DocumentState(
         version=doc.version or 0, text=doc.text, last_good_text=doc.text
     )
+    logger.info("didOpen uri=%s version=%s", doc.uri, doc.version)
     ls._publish_diagnostics_for(doc.uri, doc.text)
 
 
@@ -399,6 +545,7 @@ def did_change(ls: FizzLanguageServer, params: DidChangeTextDocumentParams) -> N
     ls._docs[uri].text = new_text
     ls._docs[uri].version = doc.version or ls._docs[uri].version
     ls._docs[uri].last_good_text = new_text
+    logger.debug("didChange uri=%s version=%s", uri, doc.version)
     ls._schedule_diagnostics(uri)
 
 

@@ -3,14 +3,15 @@ import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from "vscode-languageclient/node";
 
 let client: LanguageClient | undefined;
+let output: vscode.OutputChannel | undefined;
 
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await vscode.workspace.fs.stat(vscode.Uri.file(p));
-    return true;
-  } catch {
-    return false;
+function resolveUnder(root: string, ...parts: string[]): string {
+  const resolvedRoot = path.resolve(root);
+  const p = path.resolve(resolvedRoot, ...parts);
+  if (!p.startsWith(resolvedRoot + path.sep) && p !== resolvedRoot) {
+    throw new Error(`Path escapes root: ${p}`);
   }
+  return p;
 }
 
 async function copyDir(src: string, dst: string): Promise<void> {
@@ -34,18 +35,27 @@ async function copyDir(src: string, dst: string): Promise<void> {
 }
 
 async function ensureServerProject(context: vscode.ExtensionContext): Promise<string> {
-  const srcServerDir = path.join(context.extensionPath, "server");
-  const dstServerDir = path.join(context.globalStorageUri.fsPath, "server");
-  const markerPath = path.join(dstServerDir, ".installed-version");
+  const srcServerDir = resolveUnder(context.extensionPath, "server");
+  const dstServerDir = resolveUnder(context.globalStorageUri.fsPath, "server");
+  const markerPath = resolveUnder(dstServerDir, ".installed-version");
 
   const version = context.extension.packageJSON?.version ?? "0.0.0";
   let installedVersion: string | undefined;
-  if (await pathExists(markerPath)) {
+  try {
     const bytes = await vscode.workspace.fs.readFile(vscode.Uri.file(markerPath));
     installedVersion = Buffer.from(bytes).toString("utf8").trim();
+  } catch {
+    installedVersion = undefined;
   }
 
-  if (!(await pathExists(dstServerDir)) || installedVersion !== version) {
+  let dstExists = true;
+  try {
+    await vscode.workspace.fs.stat(vscode.Uri.file(dstServerDir));
+  } catch {
+    dstExists = false;
+  }
+
+  if (!dstExists || installedVersion !== version) {
     await vscode.workspace.fs.createDirectory(context.globalStorageUri);
     // Fresh copy (small): ensures uv can create a venv next to pyproject.toml.
     await copyDir(srcServerDir, dstServerDir);
@@ -60,14 +70,23 @@ export async function deactivate() {
     await client.stop();
     client = undefined;
   }
+  if (output) {
+    output.dispose();
+    output = undefined;
+  }
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  output = vscode.window.createOutputChannel("FizzBee Fizz");
+  output.appendLine(`[ext] activating fizzbee-fizz v${context.extension.packageJSON?.version ?? "?"}`);
+
   if (process.env.FIZZ_LSP_DISABLE === "1") {
+    output.appendLine("[ext] FIZZ_LSP_DISABLE=1; skipping LSP startup");
     return;
   }
 
   const serverDir = await ensureServerProject(context);
+  output.appendLine(`[ext] serverDir=${serverDir}`);
 
   const serverOptions: ServerOptions = {
     command: "uv",
@@ -84,6 +103,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ language: "fizz" }],
+    outputChannel: output,
+    traceOutputChannel: output,
     synchronize: {
       fileEvents: vscode.workspace.createFileSystemWatcher("**/*.fizz")
     }
@@ -95,6 +116,10 @@ export async function activate(context: vscode.ExtensionContext) {
     dispose: () => {
       void client?.stop();
     }
+  });
+
+  client.onDidChangeState((e) => {
+    output?.appendLine(`[lsp] state=${e.newState}`);
   });
 }
 
