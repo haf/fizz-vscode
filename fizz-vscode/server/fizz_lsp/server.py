@@ -6,11 +6,14 @@ import os
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+from antlr4 import InputStream
 from lsprotocol.types import (
     TEXT_DOCUMENT_COMPLETION,
     TEXT_DOCUMENT_DEFINITION,
     TEXT_DOCUMENT_DOCUMENT_SYMBOL,
     TEXT_DOCUMENT_HOVER,
+    TEXT_DOCUMENT_PREPARE_RENAME,
+    TEXT_DOCUMENT_RENAME,
     TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
     CompletionItem,
     CompletionItemKind,
@@ -29,22 +32,23 @@ from lsprotocol.types import (
     MarkupContent,
     MarkupKind,
     Position,
+    PrepareRenameParams,
     Range,
+    RenameParams,
     SemanticTokens,
     SemanticTokensLegend,
     SemanticTokensParams,
     SymbolKind,
     TextDocumentSyncKind,
+    TextEdit,
+    WorkspaceEdit,
 )
 from pygls.server import LanguageServer
-
-from antlr4 import InputStream
 
 from .analysis.indexer import CallSite, Index, Span, Symbol, build_index
 from .fizz_parser.FizzLexer import FizzLexer
 from .parse import ParseError, parse_text
 from .positions import codepoint_index_to_utf16_units, utf16_units_to_codepoint_index
-
 
 _LOG_LEVEL = os.getenv("FIZZ_LSP_LOG_LEVEL", "INFO").upper()
 logging.basicConfig(level=_LOG_LEVEL, format="%(asctime)s %(levelname)s %(message)s")
@@ -194,6 +198,105 @@ def _identifier_at(line_text: str, utf16_character: int) -> str:
     while r < len(line_text) and is_ident(line_text[r]):
         r += 1
     return line_text[l:r]
+
+
+def _is_valid_identifier(name: str) -> bool:
+    import re
+
+    return re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) is not None
+
+
+def _frontmatter_line_count(text: str) -> int:
+    """Return number of lines occupied by YAML frontmatter block, if present."""
+    import re
+
+    m = re.search(r"^(\s*)---[^\n]*\n([\s\S]*?)---[^\n]*\n", text, re.MULTILINE)
+    if not m:
+        return 0
+    return len(m.group(0).splitlines())
+
+
+def _name_token_at_position(text: str, line0: int, char0_utf16: int):
+    """Return lexer token for the NAME under cursor, or None."""
+    lines = text.splitlines()
+    line_text = lines[line0] if 0 <= line0 < len(lines) else ""
+    col_cp = utf16_units_to_codepoint_index(line_text, char0_utf16)
+    line1 = line0 + 1
+
+    fm_lines = _frontmatter_line_count(text)
+
+    stream = InputStream(text)
+    lexer = FizzLexer(stream)
+    tokens = lexer.getAllTokens()
+
+    for tok in tokens:
+        if tok.line is None:
+            continue
+        if fm_lines and tok.line <= fm_lines:
+            continue
+        if tok.line != line1:
+            continue
+        if tok.text is None:
+            continue
+        tname = (
+            lexer.symbolicNames[tok.type]
+            if 0 <= tok.type < len(lexer.symbolicNames)
+            else None
+        )
+        if tname != "NAME":
+            continue
+        start = tok.column
+        end = tok.column + len(tok.text)
+        if start <= col_cp < end:
+            return tok
+    return None
+
+
+def _rename_edits_for_document(text: str, old: str, new: str) -> list[TextEdit]:
+    """Compute file-local rename edits for NAME tokens, skipping strings/comments/frontmatter."""
+    if not _is_valid_identifier(new):
+        return []
+    if old in ("self",):
+        return []
+
+    fm_lines = _frontmatter_line_count(text)
+
+    stream = InputStream(text)
+    lexer = FizzLexer(stream)
+    tokens = lexer.getAllTokens()
+    lines = text.splitlines()
+
+    edits: list[TextEdit] = []
+    for tok in tokens:
+        if tok.line is None or tok.text is None:
+            continue
+        if fm_lines and tok.line <= fm_lines:
+            continue
+        tname = (
+            lexer.symbolicNames[tok.type]
+            if 0 <= tok.type < len(lexer.symbolicNames)
+            else None
+        )
+        if tname != "NAME":
+            continue
+        if tok.text != old:
+            continue
+        line0 = tok.line - 1
+        if not (0 <= line0 < len(lines)):
+            continue
+        line_text = lines[line0]
+        start_char = codepoint_index_to_utf16_units(line_text, tok.column)
+        end_char = codepoint_index_to_utf16_units(line_text, tok.column + len(tok.text))
+        edits.append(
+            TextEdit(
+                range=Range(
+                    start=Position(line=line0, character=start_char),
+                    end=Position(line=line0, character=end_char),
+                ),
+                new_text=new,
+            )
+        )
+    return edits
 
 
 _SEMANTIC_TOKEN_TYPES = [
@@ -359,7 +462,11 @@ def _lexical_semantic_tokens(text: str) -> list[tuple[int, int, int, int]]:
 
     out: list[tuple[int, int, int, int]] = []
     for tok in all_tokens:
-        tname = lexer.symbolicNames[tok.type] if 0 <= tok.type < len(lexer.symbolicNames) else None
+        tname = (
+            lexer.symbolicNames[tok.type]
+            if 0 <= tok.type < len(lexer.symbolicNames)
+            else None
+        )
         if not tname or tname in _SKIP_TOKEN_NAMES:
             continue
         if tok.text is None or tok.text == "":
@@ -736,3 +843,48 @@ def hover(ls: FizzLanguageServer, params: HoverParams) -> Optional[Hover]:
         ),
         range=_span_to_range(doc.text, sym.span),
     )
+
+
+@server.feature(TEXT_DOCUMENT_PREPARE_RENAME)
+def prepare_rename(
+    ls: FizzLanguageServer, params: PrepareRenameParams
+) -> Optional[Range]:
+    uri = params.text_document.uri
+    doc = ls._docs.get(uri)
+    if doc is None:
+        return None
+    tok = _name_token_at_position(
+        doc.text, params.position.line, params.position.character
+    )
+    if tok is None or tok.text is None:
+        return None
+    if tok.text in ("self",):
+        return None
+    lines = doc.text.splitlines()
+    line0 = tok.line - 1
+    line_text = lines[line0] if 0 <= line0 < len(lines) else ""
+    start_char = codepoint_index_to_utf16_units(line_text, tok.column)
+    end_char = codepoint_index_to_utf16_units(line_text, tok.column + len(tok.text))
+    return Range(
+        start=Position(line=line0, character=start_char),
+        end=Position(line=line0, character=end_char),
+    )
+
+
+@server.feature(TEXT_DOCUMENT_RENAME)
+def rename(ls: FizzLanguageServer, params: RenameParams) -> Optional[WorkspaceEdit]:
+    uri = params.text_document.uri
+    doc = ls._docs.get(uri)
+    if doc is None:
+        return None
+    tok = _name_token_at_position(
+        doc.text, params.position.line, params.position.character
+    )
+    if tok is None or tok.text is None:
+        return None
+    old = tok.text
+    new = params.new_name
+    edits = _rename_edits_for_document(doc.text, old, new)
+    if not edits:
+        return None
+    return WorkspaceEdit(changes={uri: edits})
