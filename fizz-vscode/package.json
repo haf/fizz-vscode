@@ -1,7 +1,7 @@
 {
   "name": "fizzbee-fizz",
   "displayName": "Fizz Language Support (FizzBee)",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Syntax highlighting and language features for .fizz files.",
   "publisher": "local",
   "engines": {
@@ -30,7 +30,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "activationEvents": [
     "onLanguage:fizz"
